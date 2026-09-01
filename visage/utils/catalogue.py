@@ -313,6 +313,36 @@ def _write_hdf5(data: dict, units: dict, meta: dict, out_path: Path) -> None:
                 ds.attrs["units"] = u
 
 
+_ASCII_SUBS = {
+    "—": "-",  # em dash
+    "–": "-",  # en dash
+    "−": "-",  # minus sign
+    "‘": "'",
+    "’": "'",
+    "“": '"',
+    "”": '"',
+    "…": "...",
+    "°": "deg",
+    "µ": "u",
+    "μ": "u",
+    "×": "x",
+}
+
+
+def _ascii(text: str) -> str:
+    """Coerce *text* to printable ASCII, as required by FITS headers."""
+    import unicodedata
+
+    out = "".join(_ASCII_SUBS.get(ch, ch) for ch in str(text))
+    # Strip accents (Ü -> U) rather than dropping the letter entirely.
+    out = "".join(
+        ch
+        for ch in unicodedata.normalize("NFKD", out)
+        if not unicodedata.combining(ch)
+    )
+    return "".join(ch if 32 <= ord(ch) < 127 else "?" for ch in out)
+
+
 def _write_fits(data: dict, units: dict, meta: dict, out_path: Path) -> None:
     from astropy.io import fits
     from astropy.table import Table
@@ -321,15 +351,15 @@ def _write_fits(data: dict, units: dict, meta: dict, out_path: Path) -> None:
     tbl = Table()
     for col, arr in scalar.items():
         tbl[col] = arr
-        u = units.get(col, "")
+        u = _ascii(units.get(col, ""))
         if u:
             tbl[col].unit = u
 
     hdr = fits.Header()
     for k, v in meta.items():
         # FITS keyword: max 8 chars, uppercase, no spaces
-        fits_key = k.upper().replace(" ", "_")[:8]
-        hdr[fits_key] = str(v)[:72]
+        fits_key = _ascii(k).upper().replace(" ", "_")[:8]
+        hdr[fits_key] = _ascii(v)[:72]
 
     hdu = fits.BinTableHDU(tbl, header=hdr, name="GALAXIES")
     fits.HDUList([fits.PrimaryHDU(), hdu]).writeto(

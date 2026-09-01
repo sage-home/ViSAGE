@@ -8,6 +8,20 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [2.3.2] — 2026-09-01
+
+### Fixed
+
+- **FITS catalogue export failed on the units note.** The exported metadata
+  carries a note that contained an em dash, and FITS headers only accept
+  printable ASCII, so every FITS export aborted with `FITS header values must
+  contain standard printable ASCII characters`. Header keywords, header values
+  and column units are now coerced to ASCII on the way out: common Unicode
+  punctuation is mapped to its ASCII equivalent (dashes, quotes, `°`, `µ`,
+  `×`), accents are stripped, and anything left outside printable ASCII
+  becomes `?`. This also covers non-ASCII coming in from output paths and
+  `.par` file entries. CSV, TXT and HDF5 exports are unchanged.
+
 ## [2.3.0] — 2026-08-13
 
 ### Added
